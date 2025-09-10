@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 
 from config import SUPPORTED_FILE_TYPES
 
+
 def _parse_text_file(file_bytes: bytes) -> str:
     # Handle None or empty file bytes
     if not file_bytes:
@@ -53,8 +54,7 @@ def _parse_code_file(file_bytes: bytes, filename: str) -> list:
             
             # Extract top-level nodes (functions, classes, etc.)
             blocks = []
-            lines = content.split('\
-')
+            lines = content.split('\n')
             
             for node in tree.body:
                 if isinstance(node, (ast.FunctionDef, ast.ClassDef, ast.AsyncFunctionDef)):
@@ -76,14 +76,12 @@ def _parse_code_file(file_bytes: bytes, filename: str) -> list:
                     # Extract the block with some context
                     start_context = max(0, start_line - 1)
                     block_lines = lines[start_context:end_line]
-                    block_content = '\
-'.join(block_lines)
+                    block_content = '\n'.join(block_lines)
                     blocks.append(block_content)
                 elif isinstance(node, ast.Import) or isinstance(node, ast.ImportFrom):
                     # Group imports together
                     if blocks and blocks[-1].startswith(('import ', 'from ')):
-                        blocks[-1] += '\
-' + ast.get_source_segment(content, node)
+                        blocks[-1] += '\n' + ast.get_source_segment(content, node)
                     else:
                         blocks.append(ast.get_source_segment(content, node))
                 else:
@@ -182,6 +180,7 @@ def _parse_data_file(file_bytes: bytes, filename: str) -> list:
         logging.warning(f"Data file parsing failed for {filename}: {e}")
         return _parse_text_file(file_bytes)
 
+
 @st.cache_data(show_spinner=False)
 def _parse_file_with_cache(file_bytes: bytes, filename: str) -> str:
     """Cached version of file parsing."""
@@ -207,6 +206,7 @@ def _parse_file_with_cache(file_bytes: bytes, filename: str) -> str:
     else:
         # Default to text parsing
         return _parse_text_file(file_bytes)
+
 
 @st.cache_data(show_spinner=False)
 def load_and_process_file(file_bytes: bytes, filename: str, _llm, max_chunk_tokens=1500):
@@ -242,6 +242,7 @@ def load_and_process_file(file_bytes: bytes, filename: str, _llm, max_chunk_toke
         st.sidebar.error(f"Full traceback: {traceback.format_exc()}")
         return []
 
+
 def truncate_text_by_tokens(text: str, llm, max_in_tokens=2000):
     """Truncate text to a maximum number of tokens."""
     if not text:
@@ -254,18 +255,14 @@ def truncate_text_by_tokens(text: str, llm, max_in_tokens=2000):
         return text
     
     # If we have access to the actual tokenizer, use it
-    if hasattr(llm, 'tokenizer'):
+    if hasattr(llm, 'tokenize') and hasattr(llm, 'detokenize'):
         try:
-            tokens = llm.tokenizer(text.encode('utf-8'))
+            tokens = llm.tokenize(text.encode('utf-8', errors='ignore'))
             if len(tokens) <= max_in_tokens:
                 return text
             # Truncate to max_in_tokens
             truncated_tokens = tokens[:max_in_tokens]
-            if hasattr(llm, 'detokenize'):
-                return llm.detokenize(truncated_tokens).decode('utf-8', errors='ignore')
-            else:
-                # Fallback: join the tokens as strings
-                return " ".join(str(token) for token in truncated_tokens)
+            return llm.detokenize(truncated_tokens).decode('utf-8', errors='ignore')
         except Exception:
             # Fallback to word-based truncation
             words = text.split()
@@ -274,6 +271,7 @@ def truncate_text_by_tokens(text: str, llm, max_in_tokens=2000):
         # Fallback to word-based truncation
         words = text.split()
         return " ".join(words[:max_in_tokens])
+
 
 def trim_context_to_fit(context: str, llm, available_tokens: int):
     """Trim context to fit within available tokens."""
@@ -300,9 +298,9 @@ def chunk_text(text: str, llm, max_tokens: int, overlap: int = 200, is_code_file
             return code_chunks
 
     # 1. Token-based chunking (preferred method)
-    if hasattr(llm, 'tokenizer') and hasattr(llm, 'detokenize'):
+    if hasattr(llm, 'tokenize') and hasattr(llm, 'detokenize'):
         try:
-            tokens = llm.tokenizer(text.encode('utf-8', errors='ignore'))
+            tokens = llm.tokenize(text.encode('utf-8', errors='ignore'))
             chunks = []
             for i in range(0, len(tokens), max_tokens - overlap):
                 chunk_tokens = tokens[i:i + max_tokens]
@@ -432,10 +430,10 @@ def calculate_tokens(text, llm):
             # Convert to string
             text = str(text)
     
-    if hasattr(llm, 'tokenizer'):
+    if hasattr(llm, 'tokenize'):
         try:
             # The tokenizer returns a list of token IDs
-            return len(llm.tokenizer(text.encode('utf-8')))
+            return len(llm.tokenize(text.encode('utf-8', errors='ignore')))
         except Exception as e:
             # Fallback if tokenizer fails
             return len(text.split())

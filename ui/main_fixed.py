@@ -39,7 +39,7 @@ from chat_utils import build_prompt
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def generate_and_process_response(llm, prompt, user_input, temperature, top_p, repeat_penalty):
+def generate_and_process_response(llm, prompt, user_input, temperature, top_p, repeat_penalty, min_response_tokens):
     """Generates, streams, and processes the LLM response."""
     response_container = st.empty()
     full_response = ""
@@ -54,7 +54,6 @@ def generate_and_process_response(llm, prompt, user_input, temperature, top_p, r
             st.error(f"Prompt tokens ({prompt_tokens}) exceed the context window. Please shorten the input or clear history.")
             return "", ""
 
-        min_response_tokens = 1024
         response_max_tokens = dynamic_max_tokens
 
         if response_max_tokens < min_response_tokens:
@@ -162,6 +161,7 @@ def run_ui():
         temperature = st.slider("Temperature", 0.0, 1.0, 0.7, 0.05)
         top_p = st.slider("Top P", 0.1, 1.0, 0.95, 0.05)
         repeat_penalty = st.slider("Repetition Penalty", 1.0, 2.0, 1.1, 0.05)
+        min_response_tokens = st.slider("Min Response Tokens", 128, 2048, 1024, 128)
         if 'qwen' in st.session_state.model_name.lower():
             st.session_state.remove_think_step = st.toggle(
                 "Remove <think> step", 
@@ -349,7 +349,7 @@ def run_ui():
                     )
                     return prompt
 
-                max_prompt_tokens = model_n_ctx - BUFFER_TOKENS - 256 # Reserve 256 for response
+                max_prompt_tokens = model_n_ctx - BUFFER_TOKENS - min_response_tokens # Reserve space for response
                 prompt = build_and_trim_prompt()
                 total_tokens = calculate_tokens(prompt, llm)
 
@@ -403,7 +403,6 @@ def run_ui():
                 prompt_tokens = calculate_tokens(prompt, llm)
                 model_n_ctx = MODEL_CONFIGS.get(st.session_state.model_name, {}).get("n_ctx", 4096)
                 dynamic_max_tokens = model_n_ctx - prompt_tokens - BUFFER_TOKENS
-                min_response_tokens = 1024
                 response_max_tokens = min(dynamic_max_tokens, 4096)
                 
                 # Add prompt info when debug mode is active
@@ -416,7 +415,7 @@ def run_ui():
                         st.markdown(f"**Actual Max Response Tokens (after slider cap):** {response_max_tokens}")
 
                 start_time = time.time()
-                response_text, full_response = generate_and_process_response(llm, prompt, user_input, temperature, top_p, repeat_penalty)
+                response_text, full_response = generate_and_process_response(llm, prompt, user_input, temperature, top_p, repeat_penalty, min_response_tokens)
                 end_time = time.time()
                 response_time = end_time - start_time
                 st.caption(f"Response time: {response_time:.2f} seconds")
@@ -493,7 +492,7 @@ def run_ui():
                     last_user_message = st.session_state.chat_history[-2]["content"]
                 
                 start_time = time.time()
-                response_text, full_response = generate_and_process_response(llm, st.session_state.last_prompt, last_user_message, temperature, top_p, repeat_penalty)
+                response_text, full_response = generate_and_process_response(llm, st.session_state.last_prompt, last_user_message, temperature, top_p, repeat_penalty, min_response_tokens)
                 end_time = time.time()
                 response_time = end_time - start_time
                 st.caption(f"Response time: {response_time:.2f} seconds")

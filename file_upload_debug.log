@@ -1,0 +1,10 @@
+2025-09-09 19:01:44,790 - faiss.loader - INFO - Loading faiss with AVX512 support.
+2025-09-09 19:01:44,810 - faiss.loader - INFO - Successfully loaded faiss with AVX512 support.
+2025-09-09 19:01:44,830 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2025-09-09 19:01:44,830 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-09-09 19:01:50,103 - rag_utils - INFO - No FAISS index found at rag_data/guest.faiss
+2025-09-09 19:01:50,103 - rag_utils - INFO - No metadata found at rag_data/guest_meta.pkl
+2025-09-09 19:01:50,103 - rag_utils - INFO - No embeddings file found at rag_data/guest_embeddings.npy
+2025-09-09 19:01:50,103 - rag_utils - INFO - No text chunks loaded, ensuring FAISS index and embeddings are cleared.
+2025-09-09 19:01:53,843 - llm_utils - INFO - ✅ Llama model loaded successfully with context size: 4096
+2025-09-09 19:01:53,844 - chat_utils - INFO - Built prompt with 582 characters for model Meta-Llama-3.1-8B-Instruct

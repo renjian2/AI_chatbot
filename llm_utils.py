@@ -112,6 +112,8 @@ def get_llm_callable(model_config: Dict[str, Any]) -> Callable:
             raise
 
     llm_caller.context_window_size = llama_model.n_ctx()
+    llm_caller.tokenize = llama_model.tokenize
+    llm_caller.detokenize = llama_model.detokenize
     return llm_caller
 
 def get_llm_engine():
